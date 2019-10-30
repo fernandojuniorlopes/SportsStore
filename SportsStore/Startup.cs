@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -25,7 +26,12 @@ namespace SportsStore
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllersWithViews();
-            services.AddTransient<ISportsStoreRepository, FakeRepository>();
+
+            services.AddDbContext<SportsStoreDbContext>(
+                options => options.UseSqlServer(Configuration.GetConnectionString("CSSportsStore"))
+                );
+
+            services.AddTransient<ISportsStoreRepository, EFSportsStoreRepository>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -54,6 +60,17 @@ namespace SportsStore
                     name: "default",
                     pattern: "{controller=Home}/{action=Index}/{id?}");
             });
+            if (env.IsDevelopment())
+            {
+                using (var serviceScope = app.ApplicationServices.CreateScope())
+                {
+                    var db = serviceScope.ServiceProvider.GetService<SportsStoreDbContext>();
+                
+                SeedData.Populate(db);
+                }
+
+            }
+
         }
     }
 }
